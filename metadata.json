@@ -1,0 +1,6 @@
+{
+  "name": "xrok",
+  "description": "A modern, premium Android App Store website with a fully featured Admin Panel to upload and manage apps, screenshots, statistics, reviews, and version histories.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

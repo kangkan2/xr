@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net - Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      // Allow general authentication; if verified check is enabled, verify token state
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'google.com');
+    }
+
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() && (
+        ('email' in request.auth.token && request.auth.token.email.lower() == 'indiafff568@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 3. Match Blocks for Collections
+
+    // Apps Collection
+    match /apps/{appId} {
+      allow read, get: if true;
+      allow list: if true; // The client filters by category and visibility
+      
+      allow create: if isAdmin() && isValidApp(incoming()) && isValidId(appId);
+      allow update: if isAdmin() && isValidApp(incoming());
+      allow delete: if isAdmin();
+
+      // App Shape Validation Helper
+      function isValidApp(app) {
+        return app.keys().hasAll(['id', 'name', 'packageName', 'category', 'version']) &&
+               app.id is string && app.id.size() <= 128 &&
+               app.name is string && app.name.size() <= 128 &&
+               app.packageName is string && app.packageName.size() <= 128 &&
+               app.category is string && app.category.size() <= 64 &&
+               app.version is string && app.version.size() <= 32;
+      }
+
+      // Reviews Subcollection
+      match /reviews/{reviewId} {
+        allow read, get, list: if true;
+        
+        allow create: if isSignedIn() && 
+                         isValidReview(incoming()) && 
+                         isValidId(reviewId) &&
+                         incoming().userEmail == request.auth.token.email;
+                         
+        allow update, delete: if isSignedIn() && 
+                                 (existing().userEmail == request.auth.token.email || isAdmin());
+
+        function isValidReview(review) {
+          return review.keys().hasAll(['id', 'appId', 'userName', 'userEmail', 'rating', 'comment', 'createdAt']) &&
+                 review.id is string && review.id.size() <= 128 &&
+                 review.appId is string && review.appId.size() <= 128 &&
+                 review.userName is string && review.userName.size() <= 128 &&
+                 review.userEmail is string && review.userEmail.size() <= 128 &&
+                 review.rating is number && review.rating >= 1 && review.rating <= 5 &&
+                 review.comment is string && review.comment.size() <= 1000;
+        }
+      }
+    }
+
+    // Downloads Collection
+    match /downloads/{downloadId} {
+      // Anyone can log a download (counter/activity purposes)
+      allow create: if isValidId(downloadId) && isValidDownload(incoming());
+      
+      // Only admins can see historical analytics of all downloads
+      allow get, list, read: if isAdmin();
+      allow update, delete: if isAdmin();
+
+      function isValidDownload(dl) {
+        return dl.keys().hasAll(['id', 'appId', 'appName', 'mirrorType', 'timestamp']) &&
+               dl.id is string && dl.id.size() <= 128 &&
+               dl.appId is string && dl.appId.size() <= 128 &&
+               dl.appName is string && dl.appName.size() <= 128 &&
+               dl.mirrorType is string && dl.mirrorType.size() <= 64;
+      }
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read, get: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      
+      // Let any user create/update their profile, but lock administrative flags
+      allow create: if isSignedIn() && 
+                       request.auth.uid == userId && 
+                       (incoming().isAdmin == false || ('email' in request.auth.token && request.auth.token.email.lower() == 'indiafff568@gmail.com'));
+                       
+      allow update: if isSignedIn() && 
+                       request.auth.uid == userId && 
+                       (
+                         (incoming().isAdmin == existing().isAdmin) || 
+                         ('email' in request.auth.token && request.auth.token.email.lower() == 'indiafff568@gmail.com') ||
+                         isAdmin()
+                       );
+                       
+      allow delete: if isAdmin();
+    }
+
+    // Settings Collection
+    match /settings/{settingId} {
+      allow read, get, list: if true;
+      allow write, create, update, delete: if isAdmin();
+    }
+  }
+}

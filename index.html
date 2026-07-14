@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Google AI Studio App</title>
+    <script>
+      (function() {
+        try {
+          var originalFetch = window.fetch || (typeof globalThis !== 'undefined' && globalThis.fetch);
+          if (originalFetch) {
+            var currentFetch = originalFetch;
+            var descriptor = {
+              get: function() { return currentFetch; },
+              set: function(val) { currentFetch = val; },
+              configurable: true,
+              enumerable: true
+            };
+            Object.defineProperty(window, 'fetch', descriptor);
+            if (typeof globalThis !== 'undefined') {
+              try {
+                Object.defineProperty(globalThis, 'fetch', descriptor);
+              } catch (e) {}
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to patch fetch descriptor:", e);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

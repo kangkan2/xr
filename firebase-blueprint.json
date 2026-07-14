@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "App": {
+      "title": "AppItem",
+      "description": "An Android application package listed on the market",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "packageName": { "type": "string" },
+        "category": { "type": "string" },
+        "developer": { "type": "string" },
+        "shortDescription": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "banner": { "type": "string" },
+        "rating": { "type": "number" },
+        "totalDownloads": { "type": "number" },
+        "fileSize": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "website": { "type": "string" },
+        "privacyPolicy": { "type": "string" },
+        "mirrorUrl": { "type": "string" },
+        "apkUrl": { "type": "string" },
+        "featured": { "type": "boolean" },
+        "popular": { "type": "boolean" },
+        "visibility": { "type": "boolean" },
+        "screenshots": { "type": "array" },
+        "features": { "type": "array" },
+        "permissions": { "type": "array" },
+        "tags": { "type": "array" }
+      },
+      "required": ["id", "name", "packageName", "category", "version"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "A user-submitted rating and comment for an application",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "appId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "appId", "userName", "rating", "comment", "createdAt"]
+    },
+    "Download": {
+      "title": "Download",
+      "description": "A log entry tracking application download activity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "appId": { "type": "string" },
+        "appName": { "type": "string" },
+        "mirrorType": { "type": "string" },
+        "country": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["id", "appId", "appName", "mirrorType", "timestamp"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Private user account profile detailing roles and preferences",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "isAdmin": { "type": "boolean" }
+      },
+      "required": ["email", "isAdmin"]
+    }
+  },
+  "firestore": {
+    "/apps/{appId}": {
+      "schema": "App",
+      "description": "Collection of all public and managed applications"
+    },
+    "/apps/{appId}/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Subcollection of reviews submitted for a specific application"
+    },
+    "/downloads/{downloadId}": {
+      "schema": "Download",
+      "description": "Global activity feed of application downloads"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual registered user configuration containing administrative flags"
+    }
+  }
+}
